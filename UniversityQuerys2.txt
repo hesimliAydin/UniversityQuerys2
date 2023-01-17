@@ -1,0 +1,282 @@
+CREATE DATABASE University
+GO 
+USE University
+
+CREATE TABLE Students(
+[Id] INT PRIMARY KEY IDENTITY(1,1) NOT NULL,
+[Name] NVARCHAR(MAX) NOT NULL,
+CHECK([Name]!=''),
+[Rating] INT NOT NULL,
+CHECK([Rating]>0 AND [Rating]<5),
+[Surname] NVARCHAR(MAX) NOT NULL,
+CHECK([Surname]!='')
+)
+
+INSERT INTO Students([Name],[Rating],[Surname])
+VALUES('Hesen',4,'Zamanli'),
+('Nuray',3,'Iskenderli'),
+('Seide',2,'Eliyeva'),
+('Qurban',1,'Rustemzade'),
+('Eli',4,'Eliyev'),
+('Nigar',3,'Huseynzade'),
+('Yusif',2,'Bayramzade'),
+('Vaqif',1,'Huseynli')
+
+
+CREATE TABLE Teachers(
+[Id] INT PRIMARY KEY IDENTITY(1,1) NOT NULL,
+[IsProfessor] BIT DEFAULT(0) NOT NULL,
+[Name] NVARCHAR(MAX) NOT NULL,
+CHECK([Name]!=''),
+[Salary] MONEY NOT NULL,
+CHECK([Salary]!=0 AND [Salary]>0),
+[Surname] NVARCHAR(MAX) NOT NULL,
+CHECK([Surname]!='')
+)
+
+INSERT INTO Teachers([IsProfessor],[Name],[Salary],[Surname])
+VALUES(1,'Elvin',2500,'Camalzade'),
+(0,'Omer',2050,'Nagizade'),
+(1,'Aydin',2600,'Hesimli'),
+(0,'Kamran',1800,'Kerimzade'),
+(1,'Revan',3700,'Sadiqzade'),
+(0,'Nergiz',1750,'Sadiqov')
+
+CREATE TABLE Subjects(
+[Id] INT PRIMARY KEY IDENTITY(1,1) NOT NULL,
+[Name] NVARCHAR(100) NOT NULL,
+CHECK([Name]!=''),
+UNIQUE([Name])
+)
+
+INSERT INTO Subjects([Name])
+VALUES('Programming'),
+('Designer'),
+('CyberSecurity')
+
+CREATE TABLE Curators(
+[Id] INT PRIMARY KEY IDENTITY(1,1) NOT NULL,
+[Name] NVARCHAR(MAX) NOT NULL,
+CHECK([Name]!=''),
+[Surname] NVARCHAR(MAX) NOT NULL,
+CHECK([Surname]!='')
+)
+
+INSERT INTO Curators([Name],[Surname])
+VALUES('Seid','Rustemov'),
+('Islam','Sahbazov'),
+('Bekir','Niftaliyev')
+
+
+
+CREATE TABLE Lectures(
+[Id] INT PRIMARY KEY IDENTITY(1,1) NOT NULL,
+[DateLecture] DATE NOT NULL,
+CHECK([DateLecture]<=GETDATE()),
+[SubjectId] INT FOREIGN KEY REFERENCES [Subjects](Id) NOT NULL,
+[TeacherId] INT FOREIGN KEY REFERENCES [Teachers](Id) NOT NULL
+)
+
+INSERT INTO Lectures([DateLecture],[SubjectId],[TeacherId])
+VALUES(GETDATE(),1,1),
+(GETDATE(),2,2),
+(GETDATE(),3,3),
+(GETDATE(),1,4),
+(GETDATE(),2,5),
+(GETDATE(),3,6)
+
+--SELECT *
+--FROM Lectures AS L,Subjects AS S,Teachers AS T
+--WHERE L.SubjectId=s.Id AND L.TeacherId=T.Id
+
+
+CREATE TABLE Faculties(
+[Id] INT PRIMARY KEY IDENTITY(1,1) NOT NULL,
+[Name] NVARCHAR(100) NOT NULL,
+CHECK([Name]!=''),
+UNIQUE([Name])
+)
+
+INSERT INTO Faculties([Name])
+VALUES('ProgrammingFacultie'),
+('DesignerFacultie'),
+('CyberSecurityFacultie')
+
+
+CREATE TABLE Departments(
+[Id] INT PRIMARY KEY IDENTITY(1,1) NOT NULL,
+[Building] INT NOT NULL,
+CHECK([Building]>=1 AND [Building]<=5),
+[Financing] MONEY DEFAULT(0) NOT NULL,
+CHECK([Financing]>0),
+[Name] NVARCHAR(100) NOT NULL,
+CHECK([Name]!=''),
+UNIQUE([Name]),
+[FacultyId] INT FOREIGN KEY REFERENCES [Faculties](Id) NOT NULL
+)
+
+INSERT INTO Departments([Building],[Financing],[Name],[FacultyId])
+VALUES(1,15000,'ProgramingDepartment',1),
+(3,13000,'DesignerDepartment',2),
+(5,15000,'CyberSecurityDepartment',3)
+
+CREATE TABLE Groups(
+[Id] INT PRIMARY KEY IDENTITY(1,1) NOT NULL,
+[Name] NVARCHAR(10) NOT NULL,
+CHECK([Name]!=''),
+UNIQUE([Name]),
+[Year] INT NOT NULL,
+CHECK([Year]>=1 AND [Year]<=5),
+[DepartmentId] INT FOREIGN KEY REFERENCES [Departments](Id) NOT NULL
+)
+
+INSERT INTO Groups([Name],[Year],[DepartmentId])
+VALUES('1122AZ',4,1),
+('2233AZ',3,2),
+('3344AZ',2,3)
+
+CREATE TABLE GroupsStudents(
+[Id] INT PRIMARY KEY IDENTITY(1,1) NOT NULL,
+[GroupId] INT FOREIGN KEY REFERENCES [Groups](Id) NOT NULL,
+[StudentId] INT FOREIGN KEY REFERENCES [Students](Id) NOT NULL 
+)
+
+
+INSERT INTO GroupsStudents([GroupId],[StudentId])
+VALUES(1,1),(2,2),(3,3),
+(1,4),(2,5),(3,6),
+(1,7),(2,8)
+
+CREATE TABLE GroupsCurators(
+[Id] INT PRIMARY KEY IDENTITY(1,1) NOT NULL,
+[CuratorId] INT FOREIGN KEY REFERENCES [Curators](Id) NOT NULL,
+[GroupId] INT FOREIGN KEY REFERENCES [Groups](Id) NOT NULL
+)
+
+
+INSERT INTO GroupsCurators([CuratorId],[GroupId])
+VALUES(1,1),(2,2),(3,3)
+
+
+CREATE TABLE GroupsLectures(
+[Id] INT PRIMARY KEY IDENTITY(1,1) NOT NULL,
+[GroupId] INT FOREIGN KEY REFERENCES [Groups](Id) NOT NULL,
+[LectureId] INT FOREIGN KEY REFERENCES [Lectures](Id) NOT NULL
+)
+
+INSERT INTO GroupsLectures([GroupId],[LectureId])
+VALUES(1,1),(2,2),(3,3),
+(1,4),(2,5),(3,6)
+
+
+--1 Print numbers of buildings if the total financing fund of the de-
+--partments located in them exceeds 100,000.
+SELECT Dep.[Name],Dep.[Building]
+FROM Departments AS Dep
+WHERE Dep.Building IN(SELECT Building FROM Departments AS D
+GROUP BY Building
+HAVING SUM(D.Financing)>=5000)
+
+--3 Print names of the groups whose rating (average rating of all
+--students in the group) is greater than the rating of the "D221"
+--group.
+
+SELECT GroupId,G.[Name],AVG(S.[Rating])
+FROM Groups AS G,GroupsStudents AS GS,Students AS S
+WHERE G.[Id]=GS.[GroupId] AND GS.[StudentId]=S.[Id]
+GROUP BY GroupId,G.[Name]
+HAVING AVG(S.[Rating])>(
+                        SELECT AVG(S.[Rating])
+                        FROM Groups AS G, GroupsStudents AS GS, Students AS S
+                        WHERE G.[Id]=GS.[GroupId] AND GS.[StudentId]=S.[Id]
+                        AND G.[Name]='3344AZ'
+                        GROUP BY [GroupId]
+						)
+
+
+--4 Print full names of teachers whose wage rate is higher than
+--the average wage rate of professors.
+
+SELECT T.[Name],T.[Surname],T.[Salary]
+FROM Teachers AS T
+WHERE T.[Salary]>(
+                   SELECT AVG(T.[Salary])
+                   FROM Teachers AS T
+                   WHERE T.[IsProfessor]=1
+				   )
+
+--5. Print names of groups with more than one curator.
+
+SELECT G.[Name]
+FROM Groups AS G,GroupsCurators AS GC,Curators AS C
+WHERE G.[Id]=GC.[GroupId] AND GC.[CuratorId]=C.[Id] AND G.[Id] IN(
+                               SELECT CuratorId
+                               FROM Groups AS G,GroupsCurators AS GC,Curators AS C
+                               WHERE G.[Id]=GC.[GroupId] AND GC.[CuratorId]=C.[Id]
+                               GROUP BY GC.[CuratorId]
+                               HAVING COUNT([CuratorId])>1
+							   )
+
+
+--6. Print names of the groups whose rating (the average rating
+--of all students of the group) is less than the minimum rating
+--of the 5th year groups.
+
+SELECT G.[Name],AVG(S.[Rating])
+FROM Groups AS G,GroupsStudents AS GS,Students AS S
+WHERE G.[Id]=GS.[GroupId] AND GS.[StudentId]=S.[Id]
+GROUP BY G.[Name]
+HAVING AVG(S.[Rating]) > (
+                 SELECT TOP 1 AVG(S.[Rating])
+                 FROM Groups AS G,GroupsStudents AS GS,Students AS S
+                 WHERE G.[Id]=GS.[GroupId] AND GS.[StudentId]=S.[Id] AND G.[Year]=4
+				 GROUP BY G.[Name]
+				 ORDER BY AVG(S.[Rating])		 
+)
+
+
+--7. Print names of the faculties with total financing fund of the de-
+--partments greater than the total financing fund of the Computer
+--Science department.
+
+SELECT D.[Name],D.[Financing]
+FROM Departments AS D,Faculties AS F
+WHERE D.FacultyId=F.Id
+AND D.[Financing]<(
+                   SELECT D.[Financing]
+                   FROM Departments AS D,Faculties AS F
+                   WHERE D.FacultyId=F.Id AND D.[Name]='ProgramingDepartment'
+				   )
+
+
+--8. Print names of the subjects and full names of the teachers who
+--deliver the greates number of lectures in them.
+SELECT TOP 5 T.[Name]+' '+T.[Surname],S.[Name] AS SubjectName
+FROM Teachers AS T,Lectures AS L,Subjects AS S
+WHERE T.[Id]=L.[TeacherId]
+ORDER BY L.[TeacherId] DESC
+
+
+--9. Print name of the subject in which the least number of lectures
+--are delivered.
+
+SELECT TOP 5 T.[Name]+' '+T.[Surname],S.[Name] AS SubjectName
+FROM Teachers AS T,Lectures AS L,Subjects AS S
+WHERE T.[Id]=L.[TeacherId]
+ORDER BY L.[TeacherId]
+
+
+--10. Print number of students and subjects taught at the Software
+--Development department.
+
+SELECT Sub.[Name],GS.[GroupId],COUNT(*)
+FROM Departments AS D,Groups AS G, Students AS S, GroupsStudents AS GS,
+GroupsLectures AS GL,Lectures AS L, Subjects AS Sub
+WHERE D.[Id]=G.[DepartmentId] AND GS.[StudentId]=S.[Id] AND GS.[GroupId]=G.[Id] AND
+GL.[LectureId]=L.[Id] AND L.[SubjectId]=Sub.[Id] AND GL.[GroupId]=G.[Id]
+AND D.[Name]='ProgramingDepartment'
+GROUP BY Sub.[Name],GS.[GroupId]
+
+
+
+
